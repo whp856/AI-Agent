@@ -19,6 +19,9 @@ _LANG_RANGES = [
     ("hi", [(0x0900, 0x097F)]),
 ]
 
+# 西语/葡萄牙语特有的重音与标点（ñ á é í ó ú ü ¿ ¡ ç），命中 >=2 判定为 es
+_ES_CHARS = "ñáéíóúüÑÁÉÍÓÚÜ¿¡ç"
+
 
 def detect_language(text: str) -> str | None:
     """启发式语言检测：Unicode 区间 + 拉丁字母兜底。混合/少见语言返回 unknown。"""
@@ -34,6 +37,9 @@ def detect_language(text: str) -> str | None:
     if any(v > 0 for v in scores.values()):
         top = max(scores, key=scores.get)
         return top if scores[top] >= 2 else "unknown"
+    es_hits = sum(1 for ch in text if ch in _ES_CHARS)
+    if es_hits >= 2:
+        return "es"
     if re.search(r"[a-zA-Z]", text):
         return "en"
     return "unknown"

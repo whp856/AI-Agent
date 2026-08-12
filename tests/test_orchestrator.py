@@ -21,11 +21,11 @@ def _llm_responses():
             "analysis_plan": "关注订阅与易用性"}
     topics = {"topics": [
         {"topic_id": "T1", "topic_name": "订阅扣款问题", "description": "d",
-         "member_ids": ["r0", "r1"], "evidence": ["subscription charged twice"],
-         "opposing_feedback": [], "confidence": "high", "confidence_reason": "n=2"},
+         "member_ids": ["r0", "r1", "r4"], "evidence": ["subscription charged twice"],
+         "opposing_feedback": [], "confidence": "high", "confidence_reason": "n=3"},
         {"topic_id": "T2", "topic_name": "崩溃问题", "description": "d",
-         "member_ids": ["r2", "r3"], "evidence": ["crashing"],
-         "opposing_feedback": [], "confidence": "medium", "confidence_reason": "n=2"}]}
+         "member_ids": ["r2", "r3", "r5"], "evidence": ["crashing"],
+         "opposing_feedback": [], "confidence": "medium", "confidence_reason": "n=3"}]}
     merge = {"topics": topics["topics"], "merge_log": []}
     s4 = {"findings": [
         {"kind": "model_derived", "statement": "订阅扣款问题影响严重",

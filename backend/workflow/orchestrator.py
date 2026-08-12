@@ -48,7 +48,13 @@ class Orchestrator:
             S5PRD(ctx).run()
             S6Testcases(ctx).run()
             S7Validate(ctx).run()
-            snap.status = "degraded" if model_mode == "degraded" else "done"
+            # 任一阶段降级/失败都必须如实反映在快照状态
+            if any(s.status == "failed" for s in snap.stages):
+                snap.status = "failed"
+            elif any(s.status == "degraded" for s in snap.stages):
+                snap.status = "degraded"
+            else:
+                snap.status = "done"
             snap.meta["collect_note"] = self._collect_note
         except Exception as e:
             snap.status = "failed"
