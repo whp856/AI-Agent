@@ -202,15 +202,24 @@ function bindButtons() {
 async function handleImport(e) {
   const file = e.target.files[0];
   if (!file) return;
+  const goal = $("goalInput").value.trim();
+  const constraints = Array.from(document.querySelectorAll(".chip.active"))
+    .map((c) => c.textContent);
   const fd = new FormData();
   fd.append("file", file);
+  fd.append("goal", goal);
+  fd.append("constraints", constraints.join(","));
+  $("importNote").textContent = "导入并启动分析…";
   try {
-    const r = await fetch("/api/import", { method: "POST", body: fd }).then((x) => x.json());
-    $("importNote").textContent = `导入 ${r.count} 条（${r.note}）`;
-    window._importedPreview = r.preview;
+    const r = await fetch("/api/analyze-import", { method: "POST", body: fd })
+      .then((x) => x.json());
+    if (r.detail) throw new Error(r.detail);
+    $("importNote").textContent = `已导入 ${r.count} 条，开始分析…`;
+    subscribe(r.run_id);
   } catch (err) {
     $("importNote").textContent = `导入失败：${err.message}`;
   }
+  e.target.value = "";
 }
 
 function exportSnapshot() {
@@ -223,13 +232,143 @@ function exportSnapshot() {
   URL.revokeObjectURL(a.href);
 }
 
-// ---------- 分析流程（Task 9 联调完整实现） ----------
+// ---------- 分析流程 ----------
+let currentRunId = null;
+
 async function startAnalysis() {
-  alert("分析功能将在联调阶段启用（Task 9）");
+  const url = $("urlInput").value.trim();
+  const goal = $("goalInput").value.trim();
+  const constraints = Array.from(document.querySelectorAll(".chip.active"))
+    .map((c) => c.textContent);
+  if (!url) {
+    $("urlInput").focus();
+    return;
+  }
+  $("analyzeBtn").disabled = true;
+  $("analyzeBtn").textContent = "分析中…";
+  $("resultsCard").hidden = true;
+  try {
+    const r = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, goal, constraints }),
+    }).then((x) => x.json());
+    if (r.detail) throw new Error(r.detail);
+    subscribe(r.run_id);
+  } catch (err) {
+    showFatal(err.message);
+  } finally {
+    $("analyzeBtn").disabled = false;
+    $("analyzeBtn").textContent = "开始分析";
+  }
 }
 
 async function startDemo() {
-  alert("示例演示将在联调阶段启用（Task 9）");
+  $("analyzeBtn").disabled = true;
+  $("resultsCard").hidden = true;
+  try {
+    const r = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ use_cache_only: true, app_id: "839285684",
+                             goal: "重点关注订阅转化与训练易用性",
+                             constraints: ["低分评论优先"] }),
+    }).then((x) => x.json());
+    if (r.detail) throw new Error(r.detail);
+    subscribe(r.run_id);
+  } catch (err) {
+    showFatal(err.message);
+  } finally {
+    $("analyzeBtn").disabled = false;
+  }
+}
+
+// ---------- SSE 进度 ----------
+function subscribe(runId) {
+  currentRunId = runId;
+  $("progressCard").hidden = false;
+  $("errorBanner").hidden = true;
+  renderStages([
+    { name: "s0", status: "pending" }, { name: "s1", status: "pending" },
+    { name: "s2", status: "pending" }, { name: "s3", status: "pending" },
+    { name: "s4", status: "pending" }, { name: "s5", status: "pending" },
+    { name: "s6", status: "pending" }, { name: "s7", status: "pending" },
+  ]);
+  const es = new EventSource(`/api/status/${runId}`);
+  const stageEls = {};
+  es.onmessage = (e) => {
+    const ev = JSON.parse(e.data);
+    if (ev.type === "sse.end") { es.close(); return; }
+    if (ev.type === "run.failed") { showFatal(ev.data?.error || "运行失败"); return; }
+    if (ev.type === "run.complete") {
+      es.close();
+      loadResults(ev.data.run_id || runId);
+      return;
+    }
+    const st = ev.stage;
+    if (st && STAGE_NAMES[st]) {
+      let state = { status: "running" };
+      if (ev.type === "stage.output") state = { status: "done", summary: summarize(ev) };
+      stageEls[st] = state;
+      renderStages(Object.keys(STAGE_NAMES).map((n) => ({
+        name: n,
+        status: stageEls[n]?.status || "pending",
+        summary: stageEls[n]?.summary || "",
+      })));
+    }
+    if (ev.data?.error) showFatal(ev.data.error);
+  };
+  es.onerror = () => { /* 重连由浏览器自动处理 */ };
+}
+
+function summarize(ev) {
+  const d = ev.data || {};
+  if (ev.stage === "s1") return d.note || `采集 ${d.count || 0} 条`;
+  if (ev.stage === "s2") return `有效 ${d.active || 0} / 重复 ${d.duplicates || 0}`;
+  if (ev.stage === "s3") return `主题 ${(d.topics || []).length} 个`;
+  if (ev.stage === "s4") return `结论 ${(d.findings || []).length} 条`;
+  if (ev.stage === "s5") return `需求 ${(d.requirements || []).length} 条`;
+  if (ev.stage === "s6") return `用例 ${(d.test_cases || []).length} 条`;
+  if (ev.stage === "s7") {
+    const v = d.validation_report || {};
+    return `校验${v.passed ? "通过" : "未通过"} 修正 ${(d.corrections || []).length} 项`;
+  }
+  return "";
+}
+
+function showFatal(msg) {
+  const b = $("errorBanner");
+  b.hidden = false;
+  b.textContent = `错误：${msg}`;
+}
+
+// ---------- 结果加载 ----------
+async function loadResults(runId) {
+  try {
+    const snap = await fetch(`/api/results/${runId}`).then((x) => x.json());
+    currentSnapshot = snap;
+    $("resultsCard").hidden = false;
+    // 模式徽标按运行结果更新
+    const mode = snap.meta?.model_mode || "unknown";
+    setModeBadge(mode === "degraded" ? "none" : "deepseek");
+    if (snap.meta?.model_mode === "degraded") {
+      $("modeBadge").textContent = "降级模式（无模型配置）";
+      $("modeBadge").className = "mode-badge warn";
+    } else {
+      $("modeBadge").textContent = "模型驱动";
+      $("modeBadge").className = "mode-badge ok";
+    }
+    // 修正记录
+    if (snap.corrections?.length) {
+      $("correctionsBox").hidden = false;
+      $("correctionsList").innerHTML = snap.corrections
+        .map((c) => `<li>${esc(c.target)} — ${esc(c.action)}：${esc(c.reason)}</li>`).join("");
+    }
+    renderTab(document.querySelector(".tab.active").dataset.tab);
+    window.scrollTo({ top: $("progressCard").offsetTop - 10, behavior: "smooth" });
+  } catch (err) {
+    showFatal(`加载结果失败：${err.message}`);
+  }
 }
 
 // ---------- 阶段节点渲染 ----------
