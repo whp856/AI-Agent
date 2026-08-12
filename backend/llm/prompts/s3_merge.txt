@@ -1,0 +1,15 @@
+你是一位产品分析师。以下是同一应用多批评论的主题归纳结果。
+请合并语义相似的主题，输出最终主题列表：
+
+- 相似主题合并后保留引用数量最多者的 ID，member_ids 取并集；
+- 合并理由必须记录在 "merge_reason" 字段；
+- 无相似者可保持原样；
+- 每个主题必须保留 topic_name / description / member_ids / evidence /
+  opposing_feedback / confidence / confidence_reason 字段；
+- member_ids 只能引用输入中已有的 ID。
+
+多批主题结果：
+{topics}
+
+输出严格 JSON：
+{{"topics": [...], "merge_log": [{{"merged": ["T1","T4"], "into": "T1", "reason": "..."}}]}}

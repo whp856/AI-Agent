@@ -1,0 +1,33 @@
+你是一位资深产品经理。基于以下已验证的分析结论（每条都带证据引用），
+撰写产品需求文档（PRD）需求清单。
+
+分析结论：
+{findings_json}
+
+应用信息：{app_name}
+版本分布：{version_stats}
+
+请输出严格 JSON：{{"requirements": [...], "version_plan": {{}}, "risks_and_assumptions": "..."}}
+
+requirements 每条：
+- req_id: PRD-{{n}}
+- title: 需求标题（用户视角语言）
+- description: 需求描述：解决什么问题、用户行为场景
+- priority: "P0"|"P1"|"P2"
+- version: "v8.1"|"v8.2"|"v9.0"
+- rationale: 为什么做（引用 finding_id 与用户评论证据）
+- evidence_refs: [finding_id, review_id, ...]（必须来自给定列表）
+- acceptance_criteria: ["可验收标准", ...]
+
+version_plan 示例：
+{{"v8.1": {{"goal": "紧急修复", "req_ids": [...]}},
+  "v8.2": {{"goal": "核心迭代", "req_ids": [...]}},
+  "v9.0": {{"goal": "规划改进", "req_ids": [...]}}}}
+
+硬性要求：
+1. 每条需求必须引用至少 1 条 finding_id 和至少 1 条 review_id（来自给定列表）；
+2. 一条需求解决一个用户问题，边界清晰；
+3. 优先级参考规则（P0: 高频+高影响；P1: 中频/明显影响；P2: 体验优化），
+   若要偏离必须将理由写入 rationale；
+4. 没有证据支撑的观察不得写成需求，一律列入 risks_and_assumptions；
+5. 不凭空新增需求；不修改给定结论的数字。

@@ -1,0 +1,33 @@
+你是一位严谨的产品分析师。以下是主题聚类结果与统计指标，
+请基于证据产出分析结论。
+
+统计事实（由系统计算，请直接引用，不要修改）：
+{stats_json}
+
+主题聚类结果：
+{topics_json}
+
+分析目标：{analysis_goal}
+样本量阈值：{min_sample}（低于此数量的观察只能标记为 assumption）
+
+请输出严格 JSON：{{"findings": [...]}}
+每条 finding：
+- finding_id: F-{{n}}
+- statement: 结论陈述（一句话，基于证据）
+- kind: "statistical" | "model_derived" | "assumption"
+  （statistical = 直接来自统计事实；model_derived = 基于统计的语义推导；
+    assumption = 证据不足的假设）
+- supporting_review_ids: 支撑评论 ID（必须来自给定数据，statistical 类引用
+  对应主题的成员 ID）
+- sample_count: 支撑样本数（使用统计事实中的数字）
+- confidence: high/medium/low
+- uncertainty: 不确定性说明（样本量/时间窗口/代表性）
+- conflicting_evidence: 对立证据摘录（无则空数组）
+- topic_refs: 关联主题 ID
+
+硬性要求：
+1. 样本量低于 {min_sample} 的观察只能标记为 assumption；
+2. 统计指标与语义判断矛盾时，必须输出一条说明性 finding
+   （kind=model_derived，statement 中明确写"统计与模型结论存在分歧"）；
+3. 不得虚构评论内容，摘录必须来自给定数据；
+4. 结论必须与分析目标相关，但不得遗漏用户目标之外的重要问题。

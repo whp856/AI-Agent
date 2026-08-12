@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App Store Review Analyzer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">App Store Review Analyzer</div>
+  <div class="mode-badge" id="modeBadge" title="当前运行模式">检测中…</div>
+</header>
+
+<main>
+  <!-- 输入区 -->
+  <section class="card input-card">
+    <div class="input-row">
+      <input id="urlInput" type="text" class="text-input"
+             placeholder="输入美国区 App Store 链接（如 https://apps.apple.com/us/app/workout-for-women-home-gym/id839285684）">
+      <button id="exampleBtn" class="btn btn-ghost" type="button">使用示例链接</button>
+    </div>
+    <div class="input-row">
+      <input id="goalInput" type="text" class="text-input"
+             placeholder="分析目标（可选）：如 重点关注订阅转化与训练易用性">
+    </div>
+    <div class="input-row">
+      <span class="label">约束条件：</span>
+      <span id="constraintChips" class="chips"></span>
+    </div>
+    <div class="action-row">
+      <button id="analyzeBtn" class="btn btn-primary" type="button">开始分析</button>
+      <button id="importBtn" class="btn" type="button">导入 JSON/CSV</button>
+      <input id="fileInput" type="file" accept=".json,.csv" hidden>
+      <button id="demoBtn" class="btn btn-ghost" type="button">示例数据演示</button>
+      <span id="importNote" class="import-note"></span>
+    </div>
+  </section>
+
+  <!-- 进度面板 -->
+  <section class="card progress-card" id="progressCard" hidden>
+    <h2>执行进度</h2>
+    <div id="stageTimeline" class="timeline"></div>
+    <div id="errorBanner" class="error-banner" hidden></div>
+    <details class="corrections" id="correctionsBox" hidden>
+      <summary>迭代修正记录</summary>
+      <ul id="correctionsList"></ul>
+    </details>
+  </section>
+
+  <!-- 交付物 -->
+  <section class="card results-card" id="resultsCard" hidden>
+    <h2>交付物</h2>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="reviews">原始评论</button>
+      <button class="tab" data-tab="cleaned">清洗数据</button>
+      <button class="tab" data-tab="topics">分类结果</button>
+      <button class="tab" data-tab="findings">分析结论</button>
+      <button class="tab" data-tab="prd">PRD 草稿</button>
+      <button class="tab" data-tab="cases">测试用例</button>
+      <button class="tab" data-tab="validation">追溯校验</button>
+      <button class="tab" data-tab="meta">数据与局限</button>
+    </nav>
+    <div class="tab-buttons">
+      <button id="exportBtn" class="btn btn-ghost" type="button">导出 JSON</button>
+    </div>
+    <div id="tabContent" class="tab-content"></div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
