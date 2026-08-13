@@ -43,7 +43,7 @@ class S4Findings(StageBase):
         try:
             stats_f = build_statistical_findings(self.snapshot.topics, active, min_sample)
             self.snapshot.findings = stats_f
-            self.emit("stage.output", {"stats": {
+            self.emit("stage.progress", {"stats": {
                 "rating": rating_distribution(active),
                 "versions": version_stats(active),
                 "topics": topic_stats(self.snapshot.topics, active)}})
@@ -85,9 +85,14 @@ class S4Findings(StageBase):
         for i, f in enumerate(data["findings"]):
             if not isinstance(f, dict):
                 continue
+            # 统计事实只能由确定性规则生成（build_statistical_findings）。
+            # 模型输出的 statistical 一律改判为 model_derived，杜绝"模型伪装统计事实"。
             kind = f.get("kind") if f.get("kind") in (
-                "statistical", "model_derived", "assumption") else "model_derived"
+                "model_derived", "assumption") else "model_derived"
             members = [m for m in f.get("supporting_review_ids", []) if m in valid]
+            if not members:
+                # 无任何评论引用 → 无实证支撑，强制降级为假设
+                kind = "assumption"
             conf = f.get("confidence") if f.get("confidence") in ("high", "medium", "low") else "medium"
             out.append(Finding(
                 finding_id=f"F-{len(self.snapshot.findings) + i + 1}-m", kind=kind,

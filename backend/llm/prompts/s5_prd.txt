@@ -30,4 +30,5 @@ version_plan 示例：
 3. 优先级参考规则（P0: 高频+高影响；P1: 中频/明显影响；P2: 体验优化），
    若要偏离必须将理由写入 rationale；
 4. 没有证据支撑的观察不得写成需求，一律列入 risks_and_assumptions；
-5. 不凭空新增需求；不修改给定结论的数字。
+5. kind=assumption 的结论（假设）不得作为需求依据，只能列入 risks_and_assumptions；
+6. 不凭空新增需求；不修改给定结论的数字。

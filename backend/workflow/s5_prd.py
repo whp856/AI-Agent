@@ -17,7 +17,8 @@ def priority_from_stats(f) -> str:
 
 
 def build_requirements_with_llm(findings, llm, meta) -> list[Requirement]:
-    valid_f = {x.finding_id for x in findings}
+    # 假设（assumption）类结论无实证支撑，不得作为需求依据（只能列入风险与假设）
+    valid_f = {x.finding_id for x in findings if x.kind != "assumption"}
     valid_r = set(meta.get("valid_review_ids", []))
     user = (PROMPT_DIR / "s5_prd.txt").read_text(encoding="utf-8").format(
         findings_json=json.dumps([f.model_dump() for f in findings], ensure_ascii=False),

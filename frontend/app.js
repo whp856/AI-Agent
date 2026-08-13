@@ -309,6 +309,7 @@ function subscribe(runId) {
     if (st && STAGE_NAMES[st]) {
       let state = stageEls[st] || { status: "pending", summary: "" };
       if (ev.type === "stage.started") state = { status: "running", summary: state.summary || "" };
+      if (ev.type === "stage.progress") state = { status: "running", summary: "分析中…" };
       if (ev.type === "stage.output") state = { status: "done", summary: summarize(ev) };
       stageEls[st] = state;
       renderStages(Object.keys(STAGE_NAMES).map((n) => ({
