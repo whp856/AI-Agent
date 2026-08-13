@@ -13,6 +13,7 @@ class S0Plan(StageBase):
     def run(self):
         rec = self.stage("s0")
         rec.status = "running"
+        self.emit("stage.started", {})
         try:
             if self.mode == "degraded" or not self.llm.available:
                 self.snapshot.plan = AnalysisPlan(degraded=True)

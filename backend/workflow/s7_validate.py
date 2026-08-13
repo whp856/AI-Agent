@@ -8,6 +8,7 @@ class S7Validate(StageBase):
     def run(self):
         rec = self.stage("s7")
         rec.status = "running"
+        self.emit("stage.started", {})
         try:
             valid_rids = {r.review_id for r in self.snapshot.reviews}
             valid_fids = {f.finding_id for f in self.snapshot.findings}

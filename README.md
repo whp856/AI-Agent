@@ -2,7 +2,7 @@
 
 > iOS 应用评论分析与版本规划系统 —— 输入 App Store 链接，自动完成「采集 → 清洗 → 模型动态分类 → 证据评估 → PRD 生成 → 测试用例生成 → 追溯校验」的完整产品分析工作流。
 
-本项目为 LaienTech 技能测试交付物，完整实现"自然驱动式编程"全流程产品化，核心语义任务由大模型（DeepSeek / Qwen / Ollama）实时驱动，确定性任务（采集、清洗、统计、校验）由规则完成，两者分工并互验。
+本项目为 LaienTech 技能测试交付物，完整实现"自然驱动式编程"全流程产品化，核心语义任务由大模型（DeepSeek）实时驱动，确定性任务（采集、清洗、统计、校验）由规则完成，两者分工并互验。
 
 ## 快速开始（3 步）
 
@@ -40,7 +40,7 @@ FastAPI 后端
    ├─ Agent 编排器：8 阶段状态机（S0 计划 → S1 采集 → S2 清洗 → S3 分类
    │                 → S4 证据 → S5 PRD → S6 用例 → S7 校验），校验失败回环重试
    ├─ 工具层：采集(RSS) / 清洗 / 统计 / 追溯校验 / 导入（全部确定性规则）
-   └─ LLM 层：OpenAI 兼容接口，DeepSeek 主 → Qwen 备 → Ollama 本地 → 规则模式兜底
+   └─ LLM 层：OpenAI 兼容接口，DeepSeek 主 → 规则模式兜底
 ```
 
 ## 方法选择矩阵（规则 / 统计 / LLM 分工）
@@ -65,10 +65,10 @@ FastAPI 后端
 
 ## LLM 设计
 
-- **模型与服务商**：主 `deepseek-chat`（DeepSeek 官方 API）；备选 `qwen-plus`（阿里云百炼）；本地兜底 `qwen2.5:7b`（Ollama，需 `OLLAMA_ENABLED=true`）
+- **模型与服务商**：`deepseek-chat`（DeepSeek 官方 API）
 - **参数**：temperature 0.3（分析任务低温度）、max_tokens 4096、timeout 60s、重试 3 次指数退避——全部环境变量可覆盖（`.env.example`）
 - **结构化输出**：全部语义阶段 `response_format=json_object` + Pydantic 强校验 + JSON Schema 提示
-- **降级链**：DeepSeek → Qwen → Ollama → 规则模式，每级降级在 UI 与快照中如实标注
+- **降级链**：DeepSeek → 规则模式，降级在 UI 与快照中如实标注
 - **防幻觉 4 层**：① 引用强制（只能引用候选评论 ID）② ID 完整性校验（S7）③ 结论分级（统计事实/模型推导/假设）④ 置信度 + 对立反馈
 - 核心提示词存于 `backend/llm/prompts/`（s0 / s3_classify / s3_merge / s4_findings / s5_prd / s6_testcases）
 

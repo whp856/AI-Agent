@@ -10,10 +10,6 @@ class Settings:
     llm_provider: str = "deepseek"
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com"
-    qwen_api_key: str = ""
-    qwen_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    ollama_base_url: str = "http://localhost:11434/v1"
-    ollama_enabled: bool = False
     llm_model: str = "deepseek-chat"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 4096

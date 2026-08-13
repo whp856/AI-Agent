@@ -9,7 +9,7 @@
 | 方案 | 实现 | 适用场景 |
 |---|---|---|
 | 规则基线 | `backend/workflow/s3_classify.py::keyword_fallback_topics`（关键词词表 + 统计聚类） | 无模型时的降级兜底 |
-| 模型驱动 | `classify_with_llm`（DeepSeek/Qwen 实时语义归纳） | 正式分析主路径 |
+| 模型驱动 | `classify_with_llm`（DeepSeek 实时语义归纳） | 正式分析主路径 |
 
 ## 对比维度
 

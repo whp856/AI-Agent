@@ -4,8 +4,7 @@
 
 - Python 3.10+（开发环境 3.12）
 - 可访问外网（可选，无外网时进入缓存/规则降级演示模式）
-- 可选：Ollama（本地模型模式，需下载 qwen2.5:7b）
-- 可选：DeepSeek / 阿里云百炼 API key（模型驱动模式）
+- 可选：DeepSeek API key（模型驱动模式）
 
 ## 安装
 
@@ -26,8 +25,6 @@ cp .env.example .env
 | 变量 | 说明 | 默认 |
 |---|---|---|
 | DEEPSEEK_API_KEY | DeepSeek 官方 API key | 空（未配置则跳过） |
-| QWEN_API_KEY | 阿里云百炼 API key（备选模型） | 空 |
-| OLLAMA_ENABLED | 是否启用本地 Ollama 兜底 | false |
 | LLM_TEMPERATURE | 分析温度（低=稳定） | 0.3 |
 | COLLECT_MAX_PAGES | 采集最大页数（每页约 50 条） | 5 |
 | COLLECT_RATE_LIMIT_SECONDS | 采集限速（秒/请求） | 2.0 |

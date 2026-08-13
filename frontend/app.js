@@ -307,7 +307,8 @@ function subscribe(runId) {
     }
     const st = ev.stage;
     if (st && STAGE_NAMES[st]) {
-      let state = { status: "running" };
+      let state = stageEls[st] || { status: "pending", summary: "" };
+      if (ev.type === "stage.started") state = { status: "running", summary: state.summary || "" };
       if (ev.type === "stage.output") state = { status: "done", summary: summarize(ev) };
       stageEls[st] = state;
       renderStages(Object.keys(STAGE_NAMES).map((n) => ({

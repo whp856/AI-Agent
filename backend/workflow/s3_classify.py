@@ -100,6 +100,7 @@ class S3Classify(StageBase):
         rec = self.stage("s3")
         rec.status = "running"
         active = self.active_reviews()
+        self.emit("stage.started", {"review_count": len(active)})
         try:
             if self.mode == "llm" and self.llm.available:
                 self.snapshot.topics = classify_with_llm(active, self.snapshot.plan, self.llm)

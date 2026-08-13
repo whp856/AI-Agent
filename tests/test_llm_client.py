@@ -14,7 +14,7 @@ def test_fake_llm_exhausts_to_none():
 
 
 def test_no_key_means_unavailable():
-    s = Settings(deepseek_api_key="", qwen_api_key="")
+    s = Settings(deepseek_api_key="")
     llm = LLMClient(s)
     assert llm.available is False
     assert llm.mode == "none"

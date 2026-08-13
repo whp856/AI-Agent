@@ -64,6 +64,7 @@ class S6Testcases(StageBase):
     def run(self):
         rec = self.stage("s6")
         rec.status = "running"
+        self.emit("stage.started", {})
         try:
             if self.mode == "llm" and self.llm.available and self.snapshot.requirements:
                 review_map = {}

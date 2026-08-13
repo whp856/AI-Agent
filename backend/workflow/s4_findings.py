@@ -37,6 +37,7 @@ class S4Findings(StageBase):
     def run(self):
         rec = self.stage("s4")
         rec.status = "running"
+        self.emit("stage.started", {})
         active = self.active_reviews()
         min_sample = self.snapshot.meta.get("min_sample", 3)
         try:

@@ -5,16 +5,12 @@
 | 角色 | 服务商 | 模型 | 启用条件 | 用途 |
 |---|---|---|---|---|
 | 主模型 | DeepSeek（国内直连） | `deepseek-chat`（V3） | `DEEPSEEK_API_KEY` 非空 | 全部核心语义任务 |
-| 备选模型 | 阿里云百炼 DashScope | `qwen-plus` | `QWEN_API_KEY` 非空 | 主模型故障/限流自动切换 |
-| 本地兜底 | Ollama | `qwen2.5:7b` | `OLLAMA_ENABLED=true` | 完全离线演示，质量较低但流程可跑通 |
-| 规则模式 | 无 | 关键词+统计 | 以上均不可用 | 降级演示，结论如实标注 degraded |
+| 规则模式 | 无 | 关键词+统计 | 无 key 时 | 降级演示，结论如实标注 degraded |
 
 统一 **OpenAI 兼容端点**（`backend/llm/client.py`）：
 
 ```
 DeepSeek:  https://api.deepseek.com
-Qwen:      https://dashscope.aliyuncs.com/compatible-mode/v1
-Ollama:    http://localhost:11434/v1
 ```
 
 ## 2. 模型参数配置（.env.example 全量可覆盖）
@@ -46,8 +42,7 @@ Ollama:    http://localhost:11434/v1
 
 | 故障场景 | 行为 | UI 标注 |
 |---|---|---|
-| 主模型超时/限流 | 自动切 Qwen 重跑当前阶段 | 「已切换 qwen-plus」 |
-| 云端均不可用 | 切 Ollama 本地模型（若启用） | 「本地模型模式（质量较低）」 |
+| 主模型超时/限流 | 重试后进入规则模式，结论如实标注 | 「降级模式」 |
 | 无任何模型 | 规则模式：关键词+统计兜底 | 「降级模式：置信度受限」 |
 | 采集失败 | 缓存数据兜底（如有） | 「已使用缓存数据（N 条）」 |
 | 单阶段多次失败 | 跳过并标注依赖缺失 | 「阶段 X 失败」 |

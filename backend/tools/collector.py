@@ -57,7 +57,7 @@ def fetch_reviews(app_id: str, max_pages: int = 5, rate_limit: float = 2.0,
     seen: set[str] = set()
     try:
         for page in range(1, max_pages + 1):
-            url = f"https://itunes.apple.com/rss/customerreviews/page={page}/id={app_id}/sortBy=mostRecent/json"
+            url = f"https://itunes.apple.com/us/rss/customerreviews/page={page}/id={app_id}/json"
             try:
                 resp = client.get(url)
                 resp.raise_for_status()
