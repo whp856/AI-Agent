@@ -397,13 +397,18 @@ async function loadResults(runId) {
 }
 
 // ---------- 阶段节点渲染 ----------
+const KNOWN_STAGE_STATUS = ["pending", "running", "validating", "done", "failed", "degraded", "skipped"];
+const STATUS_TEXT = { pending: "等待", running: "执行中", validating: "校验中", done: "完成",
+  failed: "失败", degraded: "降级", skipped: "跳过" };
+
 function renderStages(stages) {
   $("stageTimeline").innerHTML = stages.map((st) => {
-    const statusText = { pending: "等待", running: "执行中", validating: "校验中", done: "完成",
-      failed: "失败", degraded: "降级", skipped: "跳过" }[st.status] || st.status;
-    return `<div class="stage-node ${esc(st.status)}">
-      <div><span class="dot"></span><span class="name">${STAGE_NAMES[st.name] || esc(st.name)}</span></div>
-      <div class="status-text">${statusText}</div>
+    // 白名单防御：name/status 仅允许已知值，未知值不进入 DOM（防注入）
+    const name = STAGE_NAMES[st.name] || "未知阶段";
+    const status = KNOWN_STAGE_STATUS.includes(st.status) ? st.status : "pending";
+    return `<div class="stage-node ${status}">
+      <div><span class="dot"></span><span class="name">${name}</span></div>
+      <div class="status-text">${STATUS_TEXT[status] || status}</div>
       ${st.summary ? `<div class="summary">${esc(st.summary)}</div>` : ""}
     </div>`;
   }).join("");
