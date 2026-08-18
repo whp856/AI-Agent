@@ -360,6 +360,13 @@ async function loadResults(runId) {
     const snap = await fetch(`/api/results/${runId}`).then((x) => x.json());
     currentSnapshot = snap;
     $("resultsCard").hidden = false;
+    // 恢复已完成运行：按快照渲染最终阶段状态（刷新/重启后进度面板不空白）
+    $("progressCard").hidden = false;
+    $("errorBanner").hidden = !snap.meta?.fatal_error;
+    if (snap.meta?.fatal_error) $("errorBanner").textContent = `错误：${snap.meta.fatal_error}`;
+    renderStages(snap.stages.map((s) => ({
+      name: s.name, status: s.status, summary: s.summary || s.error || "",
+    })));
     // 徽标按快照真实状态显示，失败/降级不伪装成功
     const mode = snap.meta?.model_mode || "unknown";
     setModeBadge(mode === "degraded" ? "none" : "deepseek");
