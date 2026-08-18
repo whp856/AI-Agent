@@ -1,8 +1,12 @@
 import json
+import re
 from pathlib import Path
 
 from .stage_base import StageBase
 from ..models import Requirement
+
+# 版本号格式校验（vX.Y 或 vX.Y.Z），不预设具体版本方案，由模型按迭代需求动态规划
+_VERSION_RE = re.compile(r"^v\d+(\.\d+){1,2}$")
 
 PROMPT_DIR = Path(__file__).resolve().parent.parent / "llm" / "prompts"
 
@@ -37,7 +41,9 @@ def build_requirements_with_llm(findings, llm, meta) -> list[Requirement]:
         if not refs or not any(x in valid_f for x in refs):
             continue  # 无有效证据引用 → 丢弃
         pri = r.get("priority") if r.get("priority") in ("P0", "P1", "P2") else "P1"
-        ver = r.get("version") if r.get("version") in ("v8.1", "v8.2", "v9.0") else "v8.2"
+        ver = str(r.get("version") or "")
+        if not _VERSION_RE.match(ver):  # 动态版本方案，仅校验格式，不绑定具体版本
+            ver = "v1.0"
         out.append(Requirement(
             req_id=f"PRD-{i + 1}",
             title=r.get("title", "未命名需求")[:80],
@@ -58,7 +64,7 @@ def fallback_requirements(findings) -> list[Requirement]:
             req_id=f"PRD-{i + 1}",
             title=f"改进『{(f.statement or '')[:40]}』",
             description="降级模式生成，请结合人工判断",
-            priority=priority_from_stats(f), version="v8.2",
+            priority=priority_from_stats(f), version="v1.0",
             rationale="degraded: rule-based",
             evidence_refs=[f.finding_id] + f.supporting_review_ids[:5],
             acceptance_criteria=["验证相关评论问题得到解决"],

@@ -34,6 +34,26 @@ def test_prd_drops_requirement_without_finding_ref():
     assert reqs == []
 
 
+def test_prd_dynamic_version_kept():
+    """版本方案动态化：模型自主规划的合法版本号不被白名单改写。"""
+    llm = FakeLLM([{"requirements": [
+        {"req_id": "PRD-1", "title": "修复订阅支付失败", "description": "d",
+         "priority": "P0", "version": "v3.7", "rationale": "r",
+         "evidence_refs": ["F-T1-s", "r0", "r1"],
+         "acceptance_criteria": ["c1"]}]}])
+    reqs = build_requirements_with_llm(_findings(), llm,
+                                       {"valid_review_ids": ["r0", "r1"]})
+    assert reqs[0].version == "v3.7"
+
+
+def test_prd_invalid_version_fallback():
+    """非法版本号（不在 vX.Y 格式）回退到 v1.0，不绑定预设版本。"""
+    llm = FakeLLM([{"requirements": [
+        {"req_id": "PRD-1", "title": "t", "version": "最新版", "evidence_refs": ["F-T1-s", "r0"]}]}])
+    reqs = build_requirements_with_llm(_findings(), llm, {"valid_review_ids": ["r0"]})
+    assert reqs[0].version == "v1.0"
+
+
 def test_fallback_requirements_marked():
     reqs = fallback_requirements(_findings())
     assert len(reqs) >= 1

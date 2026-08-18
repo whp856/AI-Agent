@@ -85,12 +85,14 @@ main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
 .stage-node.done .dot { background: var(--ok); }
 .stage-node.failed .dot { background: var(--err); }
 .stage-node.degraded .dot { background: var(--warn); }
+.stage-node.skipped .dot { background: #d1d5db; }
 .stage-node .name { font-weight: 600; }
 .stage-node .status-text { color: var(--muted); }
 .stage-node .summary { margin-top: 4px; color: var(--muted); word-break: break-all; }
 .stage-node.running { border-color: var(--run); background: #eff6ff; }
 .stage-node.failed { border-color: var(--err); background: #fef2f2; }
 .stage-node.degraded { border-color: var(--warn); background: #fffbeb; }
+.stage-node.skipped { border-style: dashed; opacity: 0.65; }
 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
 

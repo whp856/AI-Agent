@@ -65,3 +65,21 @@ def test_fetch_breaks_on_http_error():
     with httpx.Client(transport=transport) as client:
         reviews = fetch_reviews("1", max_pages=3, rate_limit=0, client=client)
     assert reviews == []
+
+
+def test_fetch_reports_http_error_reason():
+    """采集失败原因必须透出到 errors 列表，不能静默吞掉。"""
+    transport = httpx.MockTransport(lambda req: httpx.Response(404))
+    errors = []
+    with httpx.Client(transport=transport) as client:
+        reviews = fetch_reviews("1", max_pages=3, rate_limit=0, client=client, errors=errors)
+    assert reviews == []
+    assert errors and "404" not in errors[0] and errors[0].startswith("page 1")
+
+
+def test_fetch_reports_empty_feed_reason():
+    transport = httpx.MockTransport(lambda req: httpx.Response(200, text='{"feed": {}}'))
+    errors = []
+    with httpx.Client(transport=transport) as client:
+        fetch_reviews("1", max_pages=5, rate_limit=0, client=client, errors=errors)
+    assert errors and "无评论条目" in errors[0]

@@ -75,7 +75,7 @@ FastAPI 后端
 ## 测试
 
 ```bash
-pytest tests/ -v        # 52 个测试，不依赖网络与真实 API key（FakeLLM + MockTransport）
+pytest tests/ -v        # 73 个测试，不依赖网络与真实 API key（FakeLLM + MockTransport）
 ```
 
 ## 评审自检清单（对照技能测试要求）
@@ -105,6 +105,17 @@ pytest tests/ -v        # 52 个测试，不依赖网络与真实 API key（Fake
 | 21 | 数据源与局限清晰 | ✅ 本文档 + docs/data-collection.md |
 | 22 | 频率限制不压站 | ✅ 限速+缓存 |
 | 23 | 严禁伪造数据 | ✅ 降级如实标注铁律 |
+
+## 稳定性与异常处理（评审关注场景）
+
+- **阶段状态如实展示**：每个阶段结束发布 `stage.status` 事件（done/failed/degraded/skipped），
+  前端按服务端真实状态渲染，采集失败时 S2–S7 标记 skipped 提前终止，杜绝"假完成"；
+- **SSE 安全**：无效 run_id 立即返回 `run.notfound` 结束流（不会无限挂起）；
+  服务器重启后订阅已完成 run，自动从磁盘快照恢复结果；
+- **run_id 唯一**：uuid 生成，并发请求不碰撞、重启不覆盖历史快照（保留最近 50 个）；
+- **采集异常透出**：RSS 请求失败/空 feed 的原因写入快照与 UI，如实标注降级/失败；
+- **版本方案动态**：PRD 版本号由模型按迭代自主规划（格式 vX.Y 校验），不绑定预设版本；
+- **降级链**：DeepSeek 不可用时各阶段自动降级（规则/统计兜底），快照与 UI 如实标注。
 
 ## 已知局限与未来改进
 

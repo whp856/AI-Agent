@@ -76,6 +76,40 @@ def test_events_published():
     assert any(t == "stage.output" for t in types)
 
 
+def test_stage_status_events_reflect_real_state():
+    """每个阶段必须发布带真实状态的 stage.status 事件。"""
+    events = []
+    orch = Orchestrator(llm=None, on_event=events.append)
+    snap = orch.execute(AnalyzeRequest(), reviews=_imported_reviews(6))
+    status_events = {e["data"]["stage"]: e["data"]["status"]
+                     for e in events if e["type"] == "stage.status"}
+    assert set(status_events) == {"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"}
+    for name, st in status_events.items():
+        real = next(s for s in snap.stages if s.name == name).status
+        assert st == real, f"stage {name}: event={st} snapshot={real}"
+
+
+def test_collect_failure_skips_rest(monkeypatch):
+    """采集失败且无缓存 → 后续阶段跳过，快照标记 failed，不空跑。"""
+    from backend.workflow import orchestrator as orch_mod
+    monkeypatch.setattr(orch_mod, "fetch_reviews", lambda *a, **k: [])
+    monkeypatch.setattr(orch_mod, "load_cache", lambda *a, **k: None)
+    monkeypatch.setattr(orch_mod, "save_cache", lambda *a, **k: "")
+    events = []
+    orch = Orchestrator(llm=None, on_event=events.append)
+    snap = orch.execute(AnalyzeRequest(url="https://apps.apple.com/us/app/x/id12345678"),
+                        reviews=None)
+    assert snap.status == "failed"
+    by_name = {s.name: s for s in snap.stages}
+    assert by_name["s1"].status == "failed"
+    for name in ("s2", "s3", "s4", "s5", "s6", "s7"):
+        assert by_name[name].status == "skipped", name
+    # 事件里也能看到 skipped
+    status_events = {e["data"]["stage"]: e["data"]["status"]
+                     for e in events if e["type"] == "stage.status"}
+    assert status_events["s7"] == "skipped"
+
+
 def test_workflow_cleans_and_dedups():
     reviews = _imported_reviews(4)
     # 制造重复：与 r0 完全相同的 作者+正文+评分

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import threading
+import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, UploadFile
@@ -51,8 +52,13 @@ def analyze(req: AnalyzeRequest):
     return {"run_id": run_id}
 
 
+def _new_run_id() -> str:
+    """唯一 run_id：uuid 而非计数器，避免并发碰撞与重启后覆盖旧快照。"""
+    return f"run_{uuid.uuid4().hex[:10]}"
+
+
 def _start(req: AnalyzeRequest) -> str:
-    run_id = f"run_{len(_events) + 1}"
+    run_id = _new_run_id()
     _events[run_id] = []
     _active[run_id] = {"done": False}
 
@@ -79,6 +85,15 @@ def _start(req: AnalyzeRequest) -> str:
 async def status(run_id: str):
     async def gen():
         idx = 0
+        # 内存中不存在该 run：可能无效，或服务器重启后已完成（磁盘有快照）
+        if run_id not in _active:
+            snap = load_snapshot(run_id)
+            if snap:
+                yield f"data: {json.dumps({'type': 'run.complete', 'run_id': run_id, 'data': {'status': snap.status, 'run_id': run_id}}, ensure_ascii=False)}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'run.notfound', 'run_id': run_id}, ensure_ascii=False)}\n\n"
+            yield "data: {\"type\":\"sse.end\"}\n\n"
+            return
         while True:
             evs = _events.get(run_id, [])
             while idx < len(evs):
@@ -131,7 +146,7 @@ async def analyze_import(file: UploadFile, goal: str = "", constraints: str = ""
 
 
 def _start_imported(req: AnalyzeRequest, reviews) -> str:
-    run_id = f"run_{len(_events) + 1}"
+    run_id = _new_run_id()
     _events[run_id] = []
     _active[run_id] = {"done": False}
 

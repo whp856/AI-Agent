@@ -41,24 +41,49 @@ class Orchestrator:
 
         try:
             S0Plan(ctx).run()
+            self._publish_stage(snap, "s0")
             self._collect(snap, request, reviews)
-            self._clean(snap)
-            S3Classify(ctx).run()
-            S4Findings(ctx).run()
-            S5PRD(ctx).run()
-            S6Testcases(ctx).run()
-            S7Validate(ctx).run()
-            # 任一阶段降级/失败都必须如实反映在快照状态
-            if any(s.status == "failed" for s in snap.stages):
+            self._publish_stage(snap, "s1")
+            # 采集失败且无任何数据 → 后续阶段无意义，跳过并如实标记
+            if not snap.reviews:
+                for name in ("s2", "s3", "s4", "s5", "s6", "s7"):
+                    rec = self._rec(snap, name)
+                    rec.status = "skipped"
+                    rec.summary = "前置阶段无数据，跳过"
+                    self._publish_stage(snap, name)
                 snap.status = "failed"
-            elif any(s.status == "degraded" for s in snap.stages):
-                snap.status = "degraded"
+                snap.meta["collect_note"] = self._collect_note
             else:
-                snap.status = "done"
-            snap.meta["collect_note"] = self._collect_note
+                self._clean(snap)
+                self._publish_stage(snap, "s2")
+                S3Classify(ctx).run()
+                self._publish_stage(snap, "s3")
+                S4Findings(ctx).run()
+                self._publish_stage(snap, "s4")
+                S5PRD(ctx).run()
+                self._publish_stage(snap, "s5")
+                S6Testcases(ctx).run()
+                self._publish_stage(snap, "s6")
+                S7Validate(ctx).run()
+                self._publish_stage(snap, "s7")
+                # 任一阶段降级/失败都必须如实反映在快照状态
+                if any(s.status == "failed" for s in snap.stages):
+                    snap.status = "failed"
+                elif any(s.status == "degraded" for s in snap.stages):
+                    snap.status = "degraded"
+                else:
+                    snap.status = "done"
+                snap.meta["collect_note"] = self._collect_note
         except Exception as e:
             snap.status = "failed"
             snap.meta["fatal_error"] = str(e)
+            # 把卡在 running 的阶段标记为 failed 并发布，前端不显示假"完成"
+            for name in ("s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"):
+                rec = self._rec(snap, name)
+                if rec.status == "running":
+                    rec.status = "failed"
+                    rec.error = str(e)
+                    self._publish_stage(snap, name)
             self._event(snap, "run.failed", {"error": str(e)})
         finally:
             from ..run_manager import save_snapshot
@@ -87,9 +112,10 @@ class Orchestrator:
                 rec.status = "failed"
                 rec.error = "use_cache_only 但无缓存"
         else:
+            errors: list[str] = []
             try:
                 fresh = fetch_reviews(request.app_id, max_pages=self.settings.collect_max_pages,
-                                      rate_limit=self.settings.collect_rate_limit)
+                                      rate_limit=self.settings.collect_rate_limit, errors=errors)
                 if fresh:
                     save_cache(request.app_id, fresh)
                     snap.reviews = fresh
@@ -99,14 +125,17 @@ class Orchestrator:
                     cached = load_cache(request.app_id)
                     if cached:
                         snap.reviews = cached
-                        self._collect_note = f"实时采集为空，使用缓存 {len(cached)} 条"
+                        reason = errors[0] if errors else "接口返回空"
+                        self._collect_note = f"实时采集失败（{reason}），使用缓存 {len(cached)} 条"
                         rec.summary = self._collect_note
                         rec.status = "degraded"
+                        rec.error = "；".join(errors[:3]) or reason
                     else:
-                        self._collect_note = "采集为空且无缓存"
+                        reason = "；".join(errors[:3]) or "接口返回空"
+                        self._collect_note = f"采集失败（{reason}），且无缓存"
                         rec.summary = self._collect_note
                         rec.status = "failed"
-                        rec.error = "采集为空且无缓存"
+                        rec.error = reason
             except Exception as e:
                 cached = load_cache(request.app_id)
                 if cached:
@@ -140,6 +169,14 @@ class Orchestrator:
 
     def _rec(self, snap, name):
         return next(s for s in snap.stages if s.name == name)
+
+    def _publish_stage(self, snap, name):
+        """阶段结束后发布带真实状态的事件，前端按此渲染（而非猜测）。"""
+        rec = self._rec(snap, name)
+        self._event(snap, "stage.status", {
+            "stage": name, "status": rec.status,
+            "summary": rec.summary, "error": rec.error,
+        })
 
     def _event(self, snap, etype, data=None):
         data = data or {}

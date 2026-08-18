@@ -14,15 +14,15 @@ requirements 每条：
 - title: 需求标题（用户视角语言）
 - description: 需求描述：解决什么问题、用户行为场景
 - priority: "P0"|"P1"|"P2"
-- version: "v8.1"|"v8.2"|"v9.0"
+- version: 由你按迭代规划自主分配的版本号（格式 vX.Y，最多 3 个版本，紧急问题放最早版本）
 - rationale: 为什么做（引用 finding_id 与用户评论证据）
 - evidence_refs: [finding_id, review_id, ...]（必须来自给定列表）
 - acceptance_criteria: ["可验收标准", ...]
 
 version_plan 示例：
-{{"v8.1": {{"goal": "紧急修复", "req_ids": [...]}},
-  "v8.2": {{"goal": "核心迭代", "req_ids": [...]}},
-  "v9.0": {{"goal": "规划改进", "req_ids": [...]}}}}
+{{"v1.1": {{"goal": "紧急修复", "req_ids": [...]}},
+  "v1.2": {{"goal": "核心迭代", "req_ids": [...]}},
+  "v2.0": {{"goal": "规划改进", "req_ids": [...]}}}}
 
 硬性要求：
 1. 每条需求必须引用至少 1 条 finding_id 和至少 1 条 review_id（来自给定列表）；

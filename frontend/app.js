@@ -299,6 +299,11 @@ function subscribe(runId) {
   es.onmessage = (e) => {
     const ev = JSON.parse(e.data);
     if (ev.type === "sse.end") { es.close(); return; }
+    if (ev.type === "run.notfound") {
+      es.close();
+      showFatal("运行不存在或已过期，请重新发起分析");
+      return;
+    }
     if (ev.type === "run.failed") { showFatal(ev.data?.error || "运行失败"); return; }
     if (ev.type === "run.complete") {
       es.close();
@@ -310,7 +315,12 @@ function subscribe(runId) {
       let state = stageEls[st] || { status: "pending", summary: "" };
       if (ev.type === "stage.started") state = { status: "running", summary: state.summary || "" };
       if (ev.type === "stage.progress") state = { status: "running", summary: "分析中…" };
-      if (ev.type === "stage.output") state = { status: "done", summary: summarize(ev) };
+      if (ev.type === "stage.output") state = { status: state.status, summary: summarize(ev) };
+      // 阶段结束：以服务端真实状态为准（done/failed/degraded/skipped）
+      if (ev.type === "stage.status") {
+        state = { status: ev.data?.status || "done", summary: ev.data?.summary || state.summary };
+        if (ev.data?.error) showFatal(`[${STAGE_NAMES[st]}] ${ev.data.error}`);
+      }
       stageEls[st] = state;
       renderStages(Object.keys(STAGE_NAMES).map((n) => ({
         name: n,
@@ -350,10 +360,16 @@ async function loadResults(runId) {
     const snap = await fetch(`/api/results/${runId}`).then((x) => x.json());
     currentSnapshot = snap;
     $("resultsCard").hidden = false;
-    // 模式徽标按运行结果更新
+    // 徽标按快照真实状态显示，失败/降级不伪装成功
     const mode = snap.meta?.model_mode || "unknown";
     setModeBadge(mode === "degraded" ? "none" : "deepseek");
-    if (snap.meta?.model_mode === "degraded") {
+    if (snap.status === "failed") {
+      $("modeBadge").textContent = "运行失败";
+      $("modeBadge").className = "mode-badge err";
+    } else if (snap.status === "degraded") {
+      $("modeBadge").textContent = "降级运行（部分环节降级）";
+      $("modeBadge").className = "mode-badge warn";
+    } else if (snap.meta?.model_mode === "degraded") {
       $("modeBadge").textContent = "降级模式（无模型配置）";
       $("modeBadge").className = "mode-badge warn";
     } else {

@@ -47,8 +47,13 @@ def _entry_to_review(e: dict) -> Review:
 
 
 def fetch_reviews(app_id: str, max_pages: int = 5, rate_limit: float = 2.0,
-                  client: httpx.Client | None = None) -> list[Review]:
-    """iTunes 官方 RSS 评论接口采集。限速、分页、失败即停。"""
+                  client: httpx.Client | None = None,
+                  errors: list[str] | None = None) -> list[Review]:
+    """iTunes 官方 RSS 评论接口采集。限速、分页、失败即停。
+
+    errors: 可选列表，用于收集每页失败原因（HTTP 错误 / 非 JSON / 空 feed），
+            便于调用方如实标注采集异常，避免"静默返回空"。
+    """
     own_client = client is None
     client = client or httpx.Client(
         timeout=15, headers={"User-Agent": "ReviewAnalyzer/1.0 (educational analysis)"},
@@ -61,16 +66,22 @@ def fetch_reviews(app_id: str, max_pages: int = 5, rate_limit: float = 2.0,
             try:
                 resp = client.get(url)
                 resp.raise_for_status()
-            except Exception:
+            except Exception as e:
+                if errors is not None:
+                    errors.append(f"page {page} HTTP 请求失败: {type(e).__name__}")
                 break  # 网络失败/页面不存在 → 停止分页
             try:
                 data = resp.json()
-            except ValueError:
+            except ValueError as e:
+                if errors is not None:
+                    errors.append(f"page {page} 响应非 JSON: {str(e)[:80]}")
                 break
             entries = data.get("feed", {}).get("entry", [])
             if isinstance(entries, dict):  # 单条时 API 返回 dict
                 entries = [entries]
             if not entries:
+                if errors is not None:
+                    errors.append(f"page {page} feed 无评论条目")
                 break
             new = 0
             for e in entries:
